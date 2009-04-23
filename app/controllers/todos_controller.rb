@@ -49,6 +49,7 @@ class TodosController < ApplicationController
     @source_view = params['_source_view'] || 'todo'
     p = TodoCreateParamsHelper.new(params, prefs)        
     p.parse_dates() unless mobile?
+    tag_list = p.tag_list
     
     @todo = current_user.todos.build(p.attributes)
     
@@ -56,6 +57,11 @@ class TodosController < ApplicationController
       project = current_user.projects.find_or_create_by_name(p.project_name)
       @new_project_created = project.new_record_before_save?
       @todo.project_id = project.id
+      if tag_list.blank?
+        tag_list = project.default_tags unless project.default_tags.blank?
+      else
+        tag_list += ','+project.default_tags unless project.default_tags.blank?
+      end
     end
     
     if p.context_specified_by_name?
@@ -67,8 +73,8 @@ class TodosController < ApplicationController
 
     @todo.update_state_from_project
     @saved = @todo.save
-    unless (@saved == false) || p.tag_list.blank?
-      @todo.tag_with(p.tag_list)
+    unless (@saved == false) || tag_list.blank?
+      @todo.tag_with(tag_list)
       @todo.tags.reload
     end
     
@@ -263,7 +269,7 @@ class TodosController < ApplicationController
     if (@project_changed && !@original_item_project_id.nil?) then
       @todo.update_state_from_project
       @todo.save!
-      @remaining_undone_in_project = current_user.projects.find(@original_item_project_id).not_done_todo_count
+      @remaining_undone_in_project = current_user.projects.find(@original_item_project_id).not_done_todos.count
     end
     determine_down_count
     determine_deferred_tag_count(params['_tag_name']) if @source_view == 'tag'
@@ -444,7 +450,7 @@ class TodosController < ApplicationController
     determine_down_count
     determine_remaining_in_context_count(@todo.context_id)
     if @source_view == 'project'
-      @remaining_undone_in_project = current_user.projects.find(@todo.project_id).not_done_todo_count
+      @remaining_undone_in_project = current_user.projects.find(@todo.project_id).not_done_todos.count
       @original_item_project_id = @todo.project_id
     end
 
@@ -653,8 +659,8 @@ class TodosController < ApplicationController
       end
       from.project do
         unless @todo.project_id == nil
-          @down_count = current_user.projects.find(@todo.project_id).not_done_todo_count(:include_project_hidden_todos => true)
-          @deferred_count = current_user.projects.find(@todo.project_id).deferred_todo_count
+          @down_count = current_user.projects.find(@todo.project_id).not_done_todos_including_hidden.count
+          @deferred_count = current_user.projects.find(@todo.project_id).deferred_todos.count
         end
       end
       from.deferred do
@@ -697,7 +703,7 @@ class TodosController < ApplicationController
       end
       from.project do
         unless @todo.project_id == nil
-          @completed_count = current_user.projects.find(@todo.project_id).done_todo_count
+          @completed_count = current_user.projects.find(@todo.project_id).done_todos.count
         end
       end
     end
