@@ -16,8 +16,8 @@ module TodosHelper
       &block )
     apply_behavior 'form.edit_todo_form', make_remote_form(
       :method => :put, 
-      :before => "this.down('button.positive').startWaiting()",
-      :loaded => "this.down('button.positive').stopWaiting()",
+      :before => "todoSpinner = this.down('button.positive'); todoSpinner.startWaiting()",
+      :loaded => "todoSpinner.stopWaiting()",
       :condition => "!(this.down('button.positive').isWaiting())"),
       :prevent_default => true
   end
@@ -221,7 +221,7 @@ module TodosHelper
   
   def item_container_id (todo)
     if source_view_is :project
-      return "p#{todo.project_id}" if todo.active?
+      return "p#{todo.project_id}items" if todo.active?
       return "tickler" if todo.deferred?
     end
     return "c#{todo.context_id}"

@@ -4,8 +4,11 @@ class TodosController < ApplicationController
 
   skip_before_filter :login_required, :only => [:index, :calendar]
   prepend_before_filter :login_or_feed_token_required, :only => [:index, :calendar]
-  append_before_filter :init, :except => [ :destroy, :completed, :completed_archive, :check_deferred, :toggle_check, :toggle_star, :edit, :update, :create, :calendar ]
+  append_before_filter :init, :except => [ :destroy, :completed,
+    :completed_archive, :check_deferred, :toggle_check, :toggle_star,
+    :edit, :update, :create, :calendar, :auto_complete_for_tag]
   append_before_filter :get_todo_from_params, :only => [ :edit, :toggle_check, :toggle_star, :show, :update, :destroy ]
+  protect_from_forgery :except => [:auto_complete_for_tag]
 
   session :off, :only => :index, :if => Proc.new { |req| is_feed_request(req) }
 
@@ -33,7 +36,7 @@ class TodosController < ApplicationController
     respond_to do |format|
       format.m {
         @new_mobile = true
-        @return_path=cookies[:mobile_url]
+        @return_path=cookies[:mobile_url] ? cookies[:mobile_url] : mobile_path
         @mobile_from_context = current_user.contexts.find_by_id(params[:from_context]) if params[:from_context]
         @mobile_from_project = current_user.projects.find_by_id(params[:from_project]) if params[:from_project]
         if params[:from_project] && !params[:from_context]
@@ -57,11 +60,6 @@ class TodosController < ApplicationController
       project = current_user.projects.find_or_create_by_name(p.project_name)
       @new_project_created = project.new_record_before_save?
       @todo.project_id = project.id
-      if tag_list.blank?
-        tag_list = project.default_tags unless project.default_tags.blank?
-      else
-        tag_list += ','+project.default_tags unless project.default_tags.blank?
-      end
     end
     
     if p.context_specified_by_name?
@@ -81,9 +79,7 @@ class TodosController < ApplicationController
     respond_to do |format|
       format.html { redirect_to :action => "index" }
       format.m do
-        @return_path=cookies[:mobile_url]
-        # todo: use function for this fixed path
-        @return_path='/m' if @return_path.nil?
+        @return_path=cookies[:mobile_url] ? cookies[:mobile_url] : mobile_path
         if @saved
           redirect_to @return_path
         else
@@ -126,7 +122,7 @@ class TodosController < ApplicationController
         @projects = current_user.projects.active
         @contexts = current_user.contexts.find(:all)
         @edit_mobile = true
-        @return_path=cookies[:mobile_url]
+        @return_path=cookies[:mobile_url] ? cookies[:mobile_url] : mobile_path
         render :action => 'show'
       end
       format.xml { render :xml => @todo.to_xml( :root => 'todo', :except => :user_id ) }
@@ -149,7 +145,7 @@ class TodosController < ApplicationController
         if @saved
           determine_remaining_in_context_count(@todo.context_id)
           determine_down_count
-          determine_completed_count if @todo.completed?
+          determine_completed_count 
           determine_deferred_tag_count(params['_tag_name']) if @source_view == 'tag'
           if source_view_is :calendar
             @original_item_due_id = get_due_id_for_calendar(@original_item_due)
@@ -280,8 +276,9 @@ class TodosController < ApplicationController
       format.m do
         if @saved
           if cookies[:mobile_url]
+            old_path = cookies[:mobile_url]
             cookies[:mobile_url] = {:value => nil, :secure => SITE_CONFIG['secure_cookies']}
-            redirect_to cookies[:mobile_url]
+            redirect_to old_path
           else
             redirect_to formatted_todos_path(:m)
           end
@@ -360,7 +357,8 @@ class TodosController < ApplicationController
     @not_done_todos = current_user.deferred_todos
     @count = @not_done_todos.size
     @down_count = @count
-    @default_project_context_name_map = build_default_project_context_name_map(@projects).to_json unless mobile?
+    @default_project_context_name_map = build_default_project_context_name_map(@projects).to_json
+    @default_project_tags_map = build_default_project_tags_map(@projects).to_json
     
     respond_to do |format|
       format.html
@@ -431,6 +429,7 @@ class TodosController < ApplicationController
     respond_to do |format|
       format.html {
         @default_project_context_name_map = build_default_project_context_name_map(@projects).to_json
+        @default_project_tags_map = build_default_project_tags_map(@projects).to_json
       }
       format.m { 
         cookies[:mobile_url]= {:value => request.request_uri, :secure => SITE_CONFIG['secure_cookies']}
@@ -466,6 +465,7 @@ class TodosController < ApplicationController
 
     @projects = current_user.projects.find(:all)
     @default_project_context_name_map = build_default_project_context_name_map(@projects).to_json
+    @default_project_tags_map = build_default_project_tags_map(@projects).to_json
   
     due_today_date = Time.zone.now
     due_this_week_date = Time.zone.now.end_of_week
@@ -502,7 +502,15 @@ class TodosController < ApplicationController
         render :action => 'calendar', :layout => false, :content_type => Mime::ICS
       }
     end
-  end  
+  end
+
+  def auto_complete_for_tag
+    @items = Tag.find(:all,
+    :conditions => [ "name LIKE ?", '%' + params['tag_list'] + '%' ],
+    :order => "name ASC",
+    :limit => 10)
+    render :inline => "<%= auto_complete_result(@items, :name) %>"
+  end
   
   private
   
@@ -738,6 +746,7 @@ class TodosController < ApplicationController
       end
        
       @default_project_context_name_map = build_default_project_context_name_map(@projects).to_json
+      @default_project_tags_map = build_default_project_tags_map(@projects).to_json
        
       render
     end

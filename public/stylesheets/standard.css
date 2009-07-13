@@ -13,10 +13,7 @@ table {
 fieldset,img { 
     border:0;
 }
-address,caption,cite,code,dfn,em,strong,th,var {
-    font-style:normal;
-    font-weight:normal;
-}
+
 ol,ul {
     list-style:none;
 }
@@ -414,26 +411,46 @@ body.preferences div#footer {
 /* The notes which may be attached to an item */      
 .todo_notes {
     margin: 5px;
-    padding: 3px;
+    padding: 5px;
     border: 1px solid #F5ED59;
     background: #FAF6AE;
     color: #666666;
 }
 
-.todo_notes p, .todo_notes li {
-    padding: 1px;
-    margin: 0px;
-    font-size: 12px;
+.todo_notes p, .todo_notes ul, .todo_notes ol,
+.project_notes p, .project_notes ul, .project_notes ol {
+    margin: 10px 0px;
+    font-size: 1em;
 }
 
-.todo_notes ul, .note_wrapper ul {
+.todo_notes ul, .note_wrapper ul,
+.project_notes ul, .project_notes ul {
     list-style-type: disc;
-    margin-left:20px;
+    margin-left: 15px;
 }
 
-.todo_notes ol {
+.todo_notes ol, .project_notes ol {
     list-style-type: decimal;
-    margin-left:20px;
+    margin-left: 15px;
+}
+
+.todo_notes ol li, .todo_notes ul li,
+.project_notes ol li, .project_notes ul li {
+  margin-left: 20px;
+}
+
+.todo_notes h1, .project_notes h1 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 10px 0px;
+}
+
+.todo_notes h2, .project_notes h2 {
+  font-size: 1.2em;
+  font-style: italic;
+  margin: 10px 0px !important;
+  padding: 0px !important;
+  background-color: transparent !important;
 }
 
 /* The notes for the project */
@@ -460,6 +477,11 @@ div.note_footer a, div.note_footer a:hover {
     padding-top: 0px;
     vertical-align: middle;
     background-color: transparent;
+}
+
+/* For the detailed notes view */
+.project_notes {
+  padding: 5px;
 }
 
 div.add_note_link {
@@ -727,7 +749,7 @@ div.alpha_sort, div.tasks_sort,span.sort_separator {
     border: none;
 }
 
-div.project_description {
+div.project_settings {
     background: #eee;
     padding: 5px;
     margin-top: 0px;
@@ -735,11 +757,8 @@ div.project_description {
     margin-right: -5px;
     color: #666;
     font-style: italic;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: normal;
-    /* Uncomment line below if you want the description to have
-    shadowed text */
-    /* text-shadow: rgba(0,0,0,.4) 0px 2px 5px; */
 }
 #project-next-prev {
     text-align:right;
@@ -1223,4 +1242,31 @@ body.integrations textarea {
 }
 .defer-container a:hover {
   background-color: inherit;
+}
+
+div.auto_complete {
+  width: 350px;
+  background: #fff;
+  color: #000;
+}
+div.auto_complete ul {
+  border:1px solid #888;
+  margin:0;
+  padding:0;
+  width:100%;
+  list-style-type:none;
+}
+div.auto_complete ul li {
+  margin:0;
+  padding:3px;
+  list-style-type: none;
+}
+div.auto_complete ul li.selected {
+  background-color: #ffb;
+  font-weight:bold;
+}
+div.auto_complete ul strong.highlight {
+  color: #800;
+  margin:0;
+  padding:0;
 }
